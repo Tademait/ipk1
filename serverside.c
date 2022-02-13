@@ -1,3 +1,11 @@
+/* -----------------------------------------
+    IPK Projekt #1 - TCP Server
+    Author: Tadeas Kozub [ xkozub06 ]
+    5. 2. 2022
+
+------------------------------------------*/
+
+
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,10 +13,10 @@
 #include <unistd.h>
 #include <netinet/in.h>
 
-/* current TODO:
-+ finish the CPU load info
-+ better parsing of the request (check for space or something)
-*/
+/**
+ * @brief  Get the current load of the server cpu
+ * @return Returns the current load of the server as integer in range 0 to 100
+ */
 
 int get_cpu_load()
 {
@@ -24,13 +32,20 @@ int get_cpu_load()
     pclose(cmd);
     return result_int;
 }
+
+/**
+ * @brief  Get the manufacturer and model of the server's CPU
+ * @param  Pointer to a buffer that will contain the cpu information
+ */
+
 void get_cpu_info(char* buffer)
 {
     FILE *cmd;
     char result[1024];
 
     // cpu info is on the 13th line. We also need to cut the start of the message
-    cmd = popen("lscpu | sed -n 13p | cut -c 22-", "r");
+    // cmd = popen("lscpu | sed -n 13p | cut -c 22-", "r");
+    cmd = popen("lscpu | sed -n 13p | awk '{print substr($0, index($0, $3))}' ", "r");
     if (cmd == NULL) {
         perror("popen");
         exit(EXIT_FAILURE);
@@ -39,6 +54,7 @@ void get_cpu_info(char* buffer)
     pclose(cmd);
     strcpy(buffer, result);
 }
+
 
 int main(int argc, char const *argv[])
 {
@@ -69,7 +85,7 @@ int main(int argc, char const *argv[])
     struct sockaddr_in server_address;
 
     server_address.sin_family = AF_INET;
-    server_address.sin_port = htons(port_num); // port 8000 is a placeholder
+    server_address.sin_port = htons(port_num);
     server_address.sin_addr.s_addr = INADDR_ANY;
 
     // bind the socket to the address
