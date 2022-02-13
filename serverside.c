@@ -101,7 +101,10 @@ int main(int argc, char const *argv[])
         // accept is blocking until client connects
         client_socket = accept(server_socket, NULL, NULL);
         char buffer[1024] = {0}; 
-        int valread = read(client_socket, buffer, 1024);
+        if (read(client_socket, buffer, 1024) < 0)
+        {
+            fprintf(stderr, "Error while reading request from client\n");
+        }
         //printf("%s\n",buffer);
         char http_response_temp[512] = {0};
         strcpy(http_response_temp, http_response);
