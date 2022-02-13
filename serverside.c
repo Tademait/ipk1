@@ -17,19 +17,19 @@
  * @brief  Get the current load of the server cpu
  * @return Returns the current load of the server as integer in range 0 to 100
  */
-
 int get_cpu_load()
 {
     FILE *cmd;
     char result[1024];
-    cmd = popen("cat /proc/stat |grep cpu |tail -1|awk '{print ($5*100)/($2+$3+$4+$5+$6+$7+$8+$9+$10)}' | awk '{print (100 - $1)}'", "r");
+    cmd = popen("top -bn 1 | grep Cpu | tail -1 | awk '{print $2}'", "r");
     if (cmd == NULL) {
         perror("popen");
         exit(EXIT_FAILURE);
     }
     fgets(result, sizeof(result), cmd);
-    int result_int = atoi(result);
     pclose(cmd);
+    int result_int = atoi(result);
+    //fprintf(stderr, "%d\n", result_int);
     return result_int;
 }
 
@@ -37,7 +37,6 @@ int get_cpu_load()
  * @brief  Get the manufacturer and model of the server's CPU
  * @param  Pointer to a buffer that will contain the cpu information
  */
-
 void get_cpu_info(char* buffer)
 {
     FILE *cmd;
@@ -65,7 +64,7 @@ int main(int argc, char const *argv[])
     }
     else if (argc > 2)
     {
-        printf("Error: too many arguments\n");
+        fprintf(stderr, "Error: too many arguments\n");
         exit(1);
     }
     else
@@ -106,33 +105,50 @@ int main(int argc, char const *argv[])
         //printf("%s\n",buffer);
         char http_response_temp[512] = {0};
         strcpy(http_response_temp, http_response);
-        if (!strncmp(buffer, "GET /hostname", 13))
+        if (!strncmp(buffer, "GET /hostname ", 14))
         {
             char hostname[64] = {0};
             gethostname(hostname, 128);
             char info[128] = {0};
-            snprintf(info, sizeof(info), "%ld\r\n\r\n%s\r\n", strlen(hostname) + 2, hostname);
+            snprintf(info, sizeof(info), "%ld\r\n\r\n%s\n", strlen(hostname) + 1, hostname);
             strcat(http_response_temp, info);
         }
-        else if (!strncmp(buffer, "GET /cpu-name", 13))
+        else if (!strncmp(buffer, "GET /cpu-name ", 14))
         {
             char cpu_name[64] = {0};
             get_cpu_info(cpu_name);
             char info[128] = {0};
-            snprintf(info, sizeof(info), "%ld\r\n\r\n%s\r\n", strlen(cpu_name), cpu_name);
+            snprintf(info, sizeof(info), "%ld\r\n\r\n%s", strlen(cpu_name), cpu_name);
             strcat(http_response_temp, info);
         }
-        else if (!strncmp(buffer, "GET /load", 9))
+        else if (!strncmp(buffer, "GET /load ", 10))
         {
             int load_percent = get_cpu_load();
             char info[128] = {0};
-            snprintf(info, sizeof(info), "%ld\r\n\r\n%d%%\r\n", strlen(info) + 4, load_percent);
+            if (load_percent >= 0 && load_percent < 10)
+            {
+                snprintf(info, sizeof(info), "%d\r\n\r\n%d%%\r\n", 4, load_percent);
+            }
+            else if (load_percent > 9 && load_percent < 100)
+            {
+                snprintf(info, sizeof(info), "%d\r\n\r\n%d%%\r\n", 5, load_percent);
+            }  
+            else if (load_percent == 100)
+            {
+                snprintf(info, sizeof(info), "%d\r\n\r\n%d%%\r\n", 6, load_percent);
+            }
+            else
+            {
+                snprintf(info, sizeof(info), "%d\r\n\r\n%d%%\r\n", 4, -1);
+                fprintf(stderr, "Error: invalid cpu load\n");
+                exit(1);
+            }
             strcat(http_response_temp, info);
         }
         else
         {
-            char info[128] = "18\r\n\r\n400: Bad Request\r\n";
-            strcat(http_response_temp, info);
+            char bad_request[106] = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length:17\r\n\r\n400 Bad Request\r\n";
+            strcpy(http_response_temp, bad_request);
         }
         //printf("%s", http_response_temp);
         send(client_socket, http_response_temp, sizeof(http_response_temp), 0);
