@@ -34,6 +34,78 @@ int get_cpu_load()
 }
 
 /**
+ * @brief  Second iteration of the the get_cpu_load() function using the /proc/info data
+ * @return Returns the current load of the server as integer in range 0 to 100
+ */
+int get_cpu_load_v2()
+{
+    FILE *fp = fopen("/proc/stat", "r");
+    if (!fp)
+    {
+        fprintf(stderr, "Error accessing the /proc/stat file\n");
+        exit(1);
+    }
+    
+    char buffer[1024];
+    fgets(buffer, sizeof(buffer), fp);
+
+    // read in all the tokens
+    strtok(buffer, " ");
+    char* prevuser = strtok(NULL, " ");
+    char* prevnice = strtok(NULL, " ");
+    char* prevsystem = strtok(NULL, " ");
+    char* previdle = strtok(NULL, " ");
+    char* previowait = strtok(NULL, " ");
+    char* previrq = strtok(NULL, " ");
+    char* prevsoftirq = strtok(NULL, " ");
+    char* prevsteal = strtok(NULL, " ");
+
+    sleep(1);
+    if (fp)
+    {
+        fclose(fp);
+    }
+    fp = fopen("/proc/stat", "r");
+    if (!fp)
+    {
+        fprintf(stderr, "Error accessing the /proc/stat file\n");
+        exit(1);
+    }
+    char buffer2[1024];
+    fgets(buffer2, sizeof(buffer2), fp);
+
+    strtok(buffer2, " ");
+    char* user = strtok(NULL, " ");
+    char* nice = strtok(NULL, " ");
+    char* system = strtok(NULL, " ");
+    char* idle = strtok(NULL, " ");
+    char* iowait = strtok(NULL, " ");
+    char* irq = strtok(NULL, " ");
+    char* softirq = strtok(NULL, " ");
+    char* steal = strtok(NULL, " ");
+
+
+    double PrevIdle = atof(previdle) + atof(previowait);
+    double Idle = atof(idle) + atof(iowait);
+    double PrevNonIdle = atof(prevuser) + atof(prevnice) + atof(prevsystem) + atof(previrq) + atof(prevsoftirq) + atof(prevsteal);
+    double NonIdle = atof(user) + atof(nice) + atof(system) + atof(irq) + atof(softirq) + atof(steal);
+
+    double PrevTotal = PrevIdle + PrevNonIdle;
+    double Total = Idle + NonIdle;
+
+    double totald = Total - PrevTotal;
+    double idled = Idle - PrevIdle;
+
+    double CPU_percentage = (totald - idled) / totald;
+    if (fp)
+    {
+        fclose(fp);
+    }
+    return (int)(CPU_percentage * 100);
+}
+
+
+/**
  * @brief  Get the manufacturer and model of the server's CPU
  * @param  Pointer to a buffer that will contain the cpu information
  */
@@ -126,7 +198,7 @@ int main(int argc, char const *argv[])
         }
         else if (!strncmp(buffer, "GET /load ", 10))
         {
-            int load_percent = get_cpu_load();
+            int load_percent = get_cpu_load_v2();
             char info[128] = {0};
             if (load_percent >= 0 && load_percent < 10)
             {
