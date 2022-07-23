@@ -1,10 +1,6 @@
 # IPK Project 1 - Server info
 
-The first project for the BUT FIT course IPK year 21/22. A simple TCP server that provides basic information about the server.
-
-Author: Tadeáš Kozub _xkozub06_
-
-Contact: xkozub06@fit.vutbr.cz
+The first project for the BUT FIT course IPK, year 21/22. A simple TCP server that provides basic information about the server.
 
 
 ### Installation
